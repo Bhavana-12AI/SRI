@@ -1,0 +1,617 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>SpaceFinder — Simple</title>
+  <style>
+    /* Simple, modern styles */
+    :root{
+      --bg:#f6f8fb;
+      --card:#ffffff;
+      --muted:#6b7280;
+      --accent:#2563eb;
+      --accent-2:#06b6d4;
+      --radius:12px;
+      --shadow: 0 6px 18px rgba(16,24,40,0.08);
+      font-family: Inter, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+    }
+    *{box-sizing:border-box}
+    body{
+      margin:0;
+      background:var(--bg);
+      color:#0f172a;
+      line-height:1.45;
+      padding:20px;
+    }
+    header{
+      display:flex;
+      gap:20px;
+      align-items:center;
+      justify-content:space-between;
+      margin-bottom:18px;
+    }
+    .brand{
+      display:flex;
+      gap:14px;
+      align-items:center;
+    }
+    .logo{
+      width:48px;height:48px;border-radius:10px;background:linear-gradient(135deg,var(--accent),var(--accent-2));
+      display:flex;align-items:center;justify-content:center;color:white;font-weight:700;font-size:18px;
+      box-shadow:var(--shadow);
+    }
+    h1{margin:0;font-size:20px}
+    p.lead{margin:0;color:var(--muted);font-size:13px}
+    .layout{
+      display:grid;
+      grid-template-columns: 320px 1fr 320px;
+      gap:18px;
+      align-items:start;
+    }
+    /* Responsive */
+    @media (max-width:1000px){
+      .layout{grid-template-columns:1fr; padding-bottom:30px;}
+      aside.right {order:3}
+    }
+
+    /* LEFT: filters & search */
+    aside.filters{
+      background:var(--card);
+      border-radius:var(--radius);
+      padding:16px;
+      box-shadow:var(--shadow);
+      height:fit-content;
+    }
+    .searchbox input, .searchbox select{
+      width:100%;padding:10px 12px;border-radius:10px;border:1px solid #e6eef8;
+      font-size:14px;margin-bottom:8px;
+    }
+    .filter-group{margin-top:10px}
+    .filter-group label{display:block;font-weight:600;font-size:13px;margin-bottom:6px}
+    .amenities{display:flex;flex-wrap:wrap;gap:8px}
+    .amenities label{background:#f1f5f9;padding:6px 8px;border-radius:8px;font-size:13px;cursor:pointer}
+    .amenities input{margin-right:6px}
+
+    /* CENTER: results */
+    main.results{
+      min-height:200px;
+    }
+    .controls{
+      display:flex;gap:10px;align-items:center;margin-bottom:12px;
+      flex-wrap:wrap;
+    }
+    .controls .chip{
+      background:white;padding:8px 12px;border-radius:999px;border:1px solid #eef2ff;font-weight:600;
+    }
+    .grid{
+      display:grid;
+      grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+      gap:14px;
+    }
+    .card{
+      background:var(--card);
+      border-radius:12px;
+      overflow:hidden;
+      box-shadow:var(--shadow);
+      display:flex;flex-direction:column;
+      height:100%;
+    }
+    .card img{width:100%;height:140px;object-fit:cover;display:block}
+    .card .body{padding:12px;flex:1;display:flex;flex-direction:column;gap:8px}
+    .card h3{margin:0;font-size:16px}
+    .meta{font-size:13px;color:var(--muted);display:flex;justify-content:space-between;align-items:center}
+    .tags{display:flex;gap:8px;flex-wrap:wrap}
+    .tag{background:#eef2ff;padding:6px 8px;border-radius:8px;font-size:12px;color:var(--accent);}
+
+    .card .actions{display:flex;gap:8px;padding:12px;border-top:1px solid #f3f6fb}
+    .btn{
+      flex:1;border-radius:10px;padding:8px 12px;border:0;font-weight:700;cursor:pointer;
+    }
+    .btn.primary{background:var(--accent);color:white}
+    .btn.ghost{background:transparent;border:1px solid #e6eef8;color:var(--muted)}
+
+    /* RIGHT: owner dashboard + featured */
+    aside.right{
+      background:var(--card);
+      border-radius:var(--radius);
+      padding:12px;
+      box-shadow:var(--shadow);
+      height:fit-content;
+    }
+    .featured .item{display:flex;gap:10px;align-items:center;padding:8px;border-radius:10px}
+    .thumb{width:56px;height:56px;border-radius:8px;object-fit:cover}
+
+    /* Modal */
+    .modal-backdrop{position:fixed;inset:0;background:rgba(2,6,23,0.45);display:none;align-items:center;justify-content:center;z-index:50}
+    .modal{background:white;width:92%;max-width:860px;border-radius:12px;padding:16px;box-shadow:0 20px 50px rgba(2,6,23,0.45)}
+    .modal .top{display:flex;gap:12px}
+    .modal img{width:260px;height:160px;object-fit:cover;border-radius:8px}
+    .amen-list{display:flex;gap:8px;flex-wrap:wrap}
+    .badge{padding:6px 8px;border-radius:999px;font-weight:700;background:#eef2ff;color:var(--accent);font-size:12px}
+
+    footer{margin-top:18px;text-align:center;color:var(--muted);font-size:13px}
+    /* small helpers */
+    input[type=range]{width:100%}
+    small{color:var(--muted)}
+    form .form-row{margin-bottom:10px}
+    textarea{width:100%;min-height:80px;padding:8px;border-radius:8px;border:1px solid #eef2ff}
+  </style>
+</head>
+<body>
+  <header>
+    <div class="brand">
+      <div class="logo">SF</div>
+      <div>
+        <h1>SpaceFinder</h1>
+        <p class="lead">Discover & book workspaces in your city</p>
+      </div>
+    </div>
+    <div style="display:flex;gap:10px;align-items:center">
+      <button id="openPostBtn" class="btn primary" style="padding:10px 14px">Post a Space</button>
+      <div class="chip">Demo</div>
+    </div>
+  </header>
+
+  <div class="layout">
+    <!-- LEFT: filters -->
+    <aside class="filters">
+      <div class="searchbox">
+        <input id="q" placeholder="Search by name or location (e.g. 'Bengaluru')" />
+        <input id="minPrice" type="number" placeholder="Min price (₹)" min="0" style="width:48%;display:inline-block" />
+        <input id="maxPrice" type="number" placeholder="Max price (₹)" min="0" style="width:48%;display:inline-block;float:right" />
+      </div>
+
+      <div class="filter-group">
+        <label>Type</label>
+        <select id="typeFilter">
+          <option value="">Any type</option>
+          <option>Private Cabin</option>
+          <option>Shared Desk</option>
+          <option>Meeting Room</option>
+          <option>Open Space</option>
+        </select>
+      </div>
+
+      <div class="filter-group">
+        <label>Amenities</label>
+        <div class="amenities">
+          <label><input type="checkbox" value="Wi-Fi" class="amenChk">Wi-Fi</label>
+          <label><input type="checkbox" value="Parking" class="amenChk">Parking</label>
+          <label><input type="checkbox" value="AC" class="amenChk">AC</label>
+          <label><input type="checkbox" value="Projector" class="amenChk">Projector</label>
+          <label><input type="checkbox" value="Meeting Rooms" class="amenChk">Meeting Rooms</label>
+          <label><input type="checkbox" value="Cafeteria" class="amenChk">Cafeteria</label>
+        </div>
+      </div>
+
+      <div class="filter-group">
+        <label>Sort</label>
+        <select id="sortBy">
+          <option value="relevance">Most relevant</option>
+          <option value="price-asc">Price: low → high</option>
+          <option value="price-desc">Price: high → low</option>
+          <option value="views-desc">Trending</option>
+        </select>
+      </div>
+
+      <div style="margin-top:12px;display:flex;gap:8px">
+        <button id="applyFilters" class="btn primary">Apply</button>
+        <button id="resetFilters" class="btn ghost">Reset</button>
+      </div>
+    </aside>
+
+    <!-- CENTER: results -->
+    <main class="results">
+      <div class="controls">
+        <div class="chip" id="resultCount">0 results</div>
+        <small style="color:var(--muted)">Tip: click "View" on a card for details</small>
+      </div>
+
+      <section class="grid" id="resultsGrid" aria-live="polite"></section>
+    </main>
+
+    <!-- RIGHT: featured & owner -->
+    <aside class="right">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+        <strong>Featured</strong>
+        <small class="muted">Top picks</small>
+      </div>
+      <div class="featured" id="featuredList"></div>
+
+      <hr style="margin:12px 0;border:none;border-top:1px solid #f3f6fb" />
+      <div>
+        <strong>Your dashboard</strong>
+        <p class="lead" style="font-size:13px;margin-top:6px">Post and manage listings — client-only demo</p>
+        <small style="color:var(--muted)">Data is stored in your browser (localStorage)</small>
+      </div>
+    </aside>
+  </div>
+
+  <footer>
+    Built for demo • SpaceFinder simple scheme • (sample only)
+  </footer>
+
+  <!-- MODAL view -->
+  <div id="modalBackdrop" class="modal-backdrop" role="dialog" aria-modal="true">
+    <div class="modal" role="document" aria-labelledby="modalTitle">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+        <h2 id="modalTitle" style="margin:0;font-size:18px">Space details</h2>
+        <button id="closeModal" class="btn ghost">Close</button>
+      </div>
+      <div class="top">
+        <img id="modalImg" src="" alt="space photo" />
+        <div style="flex:1">
+          <h3 id="modalName"></h3>
+          <div class="meta"><span id="modalType"></span><span id="modalPrice"></span></div>
+          <p id="modalDesc" style="margin-top:10px;color:var(--muted)"></p>
+          <div style="margin-top:10px">
+            <div class="amen-list" id="modalAmenities"></div>
+          </div>
+          <div style="margin-top:12px;display:flex;gap:8px">
+            <a id="contactLink" class="btn primary" href="#" target="_blank">Contact Owner</a>
+            <button id="fakeBook" class="btn ghost">Check availability</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- POST LISTING modal (simple) -->
+  <div id="postBackdrop" class="modal-backdrop" aria-hidden="true" style="display:none">
+    <div class="modal">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+        <h2 style="margin:0">Post a new listing</h2>
+        <button id="closePost" class="btn ghost">Close</button>
+      </div>
+
+      <form id="postForm">
+        <div class="form-row">
+          <label><strong>Space name</strong></label>
+          <input id="p_name" required placeholder="e.g. Oak Co-work Hub" />
+        </div>
+        <div class="form-row">
+          <label><strong>Location</strong></label>
+          <input id="p_location" required placeholder="City or area" />
+        </div>
+        <div class="form-row">
+          <label><strong>Type</strong></label>
+          <select id="p_type">
+            <option>Private Cabin</option>
+            <option>Shared Desk</option>
+            <option>Meeting Room</option>
+            <option>Open Space</option>
+          </select>
+        </div>
+        <div class="form-row">
+          <label><strong>Price (₹/day)</strong></label>
+          <input id="p_price" type="number" min="0" required />
+        </div>
+        <div class="form-row">
+          <label><strong>Image URL</strong></label>
+          <input id="p_img" placeholder="Paste an image URL or leave blank" />
+        </div>
+        <div class="form-row">
+          <label><strong>Owner contact (email/phone)</strong></label>
+          <input id="p_contact" placeholder="owner@example.com" />
+        </div>
+        <div class="form-row">
+          <label><strong>Amenities (comma separated)</strong></label>
+          <input id="p_amen" placeholder="Wi-Fi, Parking, AC" />
+        </div>
+        <div class="form-row">
+          <label><strong>Description</strong></label>
+          <textarea id="p_desc" placeholder="Short description"></textarea>
+        </div>
+
+        <div style="display:flex;gap:8px;justify-content:flex-end">
+          <button type="submit" class="btn primary">Post listing</button>
+          <button type="button" id="cancelPost" class="btn ghost">Cancel</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+<script>
+/*
+  SpaceFinder - simple client-side demo
+  - dataset: sampleListings (below)
+  - features:
+    * search by keyword (name/location)
+    * filter by type, amenities, price range
+    * sort by relevance / price / views
+    * view details modal
+    * owner post form (stores to localStorage)
+*/
+
+const SAMPLE_KEY = 'spacefinder_demo_listings_v1';
+
+const sampleListings = [
+  {
+    id: 's1',
+    name: 'Breeze Private Cabin',
+    location: 'Bengaluru',
+    type: 'Private Cabin',
+    price: 1200,
+    img: 'https://images.unsplash.com/photo-1557800636-894a64c1696f?q=80&w=1200&auto=format&fit=crop&ixlib=rb-4.0.3&s=8b6d3b1d8b9d1b3a7c5f4c1a7b8a4c6f',
+    amenities: ['Wi-Fi','AC','Parking'],
+    desc: 'Quiet private cabin with natural light, high-speed Wi-Fi and ergonomic chair.',
+    contact: 'owner@breeze.example',
+    views: 86
+  },
+  {
+    id: 's2',
+    name: 'Lotus Shared Desk',
+    location: 'Mumbai',
+    type: 'Shared Desk',
+    price: 350,
+    img: 'https://images.unsplash.com/photo-1524758631624-e2822e304c36?q=80&w=1200&auto=format&fit=crop&ixlib=rb-4.0.3&s=3e2f9b4edb7b3c0a0cef3a6a3de3d2a1',
+    amenities: ['Wi-Fi','Cafeteria'],
+    desc: 'Affordable shared desks in a friendly coworking space with meeting rooms on request.',
+    contact: 'contact@lotusdesk.example',
+    views: 212
+  },
+  {
+    id: 's3',
+    name: 'Summit Meeting Room',
+    location: 'Delhi',
+    type: 'Meeting Room',
+    price: 2200,
+    img: 'https://images.unsplash.com/photo-1553181970-1f7b09e3df3a?q=80&w=1200&auto=format&fit=crop&ixlib=rb-4.0.3&s=872cd9bcd2a65b9a3d6f4c7f4a1a9d1b',
+    amenities: ['Wi-Fi','Projector','AC','Meeting Rooms'],
+    desc: 'Professional meeting room for 8-12 people with projector and video conferencing.',
+    contact: 'bookings@summit.example',
+    views: 143
+  },
+  {
+    id: 's4',
+    name: 'Open Garden Space',
+    location: 'Bengaluru',
+    type: 'Open Space',
+    price: 500,
+    img: 'https://images.unsplash.com/photo-1507679799987-c73779587ccf?q=80&w=1200&auto=format&fit=crop&ixlib=rb-4.0.3&s=9ff50f1b4a1c3e3b6a5d4c7a6d0e8b2f',
+    amenities: ['Wi-Fi','Cafeteria','Parking'],
+    desc: 'Open, airy garden area perfect for casual work and small meetups.',
+    contact: 'hello@opengarden.example',
+    views: 59
+  }
+];
+
+// --- Utility functions ---
+const $ = id => document.getElementById(id);
+const q = sel => document.querySelector(sel);
+const qa = sel => Array.from(document.querySelectorAll(sel));
+
+function uid(prefix='id'){
+  return prefix + '_' + Math.random().toString(36).slice(2,9);
+}
+
+// localStorage helpers
+function loadListings(){
+  const raw = localStorage.getItem(SAMPLE_KEY);
+  if(raw){
+    try{
+      return JSON.parse(raw);
+    }catch(e){
+      console.warn('failed parse local data, using defaults');
+    }
+  }
+  localStorage.setItem(SAMPLE_KEY, JSON.stringify(sampleListings));
+  return sampleListings.slice();
+}
+function saveListings(list){
+  localStorage.setItem(SAMPLE_KEY, JSON.stringify(list));
+}
+
+// state
+let listings = loadListings();
+
+// --- Rendering ---
+function formatPrice(p){ return `₹${p.toLocaleString()}`; }
+
+function renderGrid(items){
+  const grid = $('resultsGrid');
+  grid.innerHTML = '';
+  if(!items.length){
+    grid.innerHTML = '<div style="grid-column:1/-1;padding:28px;text-align:center;color:var(--muted)">No spaces match your filters.</div>';
+    $('resultCount').textContent = '0 results';
+    return;
+  }
+  $('resultCount').textContent = `${items.length} result${items.length>1?'s':''}`;
+  items.forEach(item=>{
+    const card = document.createElement('article');
+    card.className = 'card';
+    card.innerHTML = `
+      <img src="${item.img || placeholderImage()}" alt="${escapeHtml(item.name)}" loading="lazy" />
+      <div class="body">
+        <div style="display:flex;justify-content:space-between;align-items:start">
+          <h3>${escapeHtml(item.name)}</h3>
+          <div class="badge">${escapeHtml(item.location)}</div>
+        </div>
+        <div class="meta"><span>${escapeHtml(item.type)}</span><span>${formatPrice(item.price)}</span></div>
+        <p style="margin:6px 0;color:var(--muted);font-size:13px">${escapeHtml(truncate(item.desc,100))}</p>
+        <div class="tags">${(item.amenities || []).slice(0,3).map(a=>`<span class="tag">${escapeHtml(a)}</span>`).join('')}</div>
+      </div>
+      <div class="actions">
+        <button class="btn ghost viewBtn" data-id="${item.id}">View</button>
+        <button class="btn primary contactBtn" data-contact="${escapeHtml(item.contact)}">Contact</button>
+      </div>
+    `;
+    grid.appendChild(card);
+  });
+}
+
+function renderFeatured(){
+  // sort by views desc, show top 3
+  const featured = listings.slice().sort((a,b)=> (b.views||0) - (a.views||0)).slice(0,3);
+  const container = $('featuredList');
+  container.innerHTML = '';
+  featured.forEach(f=>{
+    const div = document.createElement('div');
+    div.className = 'item';
+    div.innerHTML = `
+      <img class="thumb" src="${f.img || placeholderImage()}" alt="${escapeHtml(f.name)}" />
+      <div style="flex:1">
+        <div style="display:flex;justify-content:space-between">
+          <strong style="font-size:14px">${escapeHtml(f.name)}</strong>
+          <small style="color:var(--muted)">${formatPrice(f.price)}</small>
+        </div>
+        <div style="color:var(--muted);font-size:13px">${escapeHtml(f.location)} • ${escapeHtml(f.type)}</div>
+      </div>
+    `;
+    container.appendChild(div);
+  });
+}
+
+function placeholderImage(){
+  return 'https://images.unsplash.com/photo-1520880867055-1e30d1cb001c?q=80&w=1200&auto=format&fit=crop&ixlib=rb-4.0.3&s=661c0fe0a8b2f7a0a4d1e9f6b2d7f3c9';
+}
+
+function truncate(s, n){ if(!s) return ''; return s.length>n? s.slice(0,n-1)+'…' : s; }
+function escapeHtml(s){ if(!s && s!==0) return ''; return String(s).replace(/[&<>"']/g, c=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c])); }
+
+// --- Filter logic ---
+function getFilters(){
+  const qv = $('q').value.trim().toLowerCase();
+  const type = $('typeFilter').value;
+  const minP = parseInt($('minPrice').value) || 0;
+  const maxPRaw = $('maxPrice').value;
+  const maxP = maxPRaw ? parseInt(maxPRaw) : Number.MAX_SAFE_INTEGER;
+  const amenChecked = qa('.amenChk:checked').map(el => el.value);
+
+  const sortBy = $('sortBy').value;
+  return { qv, type, minP, maxP, amenChecked, sortBy };
+}
+
+function applyFilters(){
+  const f = getFilters();
+  let out = listings.slice();
+
+  if(f.qv){
+    out = out.filter(it => (it.name+ ' ' + it.location + ' ' + (it.desc||'')).toLowerCase().includes(f.qv));
+  }
+  if(f.type){
+    out = out.filter(it => it.type === f.type);
+  }
+  out = out.filter(it => (it.price||0) >= f.minP && (it.price||0) <= f.maxP);
+
+  if(f.amenChecked.length){
+    out = out.filter(it => {
+      const a = (it.amenities||[]).map(x=>x.toLowerCase());
+      return f.amenChecked.every(ch => a.includes(ch.toLowerCase()));
+    });
+  }
+
+  // simple relevance ranking: if search query exists, bump name matches higher
+  if(f.qv){
+    out.sort((a,b)=>{
+      const aScore = scoreMatch(a,f.qv);
+      const bScore = scoreMatch(b,f.qv);
+      return bScore - aScore;
+    });
+  }
+
+  if(f.sortBy === 'price-asc') out.sort((a,b)=>(a.price||0)-(b.price||0));
+  if(f.sortBy === 'price-desc') out.sort((a,b)=>(b.price||0)-(a.price||0));
+  if(f.sortBy === 'views-desc') out.sort((a,b)=>(b.views||0)-(a.views||0));
+
+  renderGrid(out);
+  renderFeatured();
+}
+
+function scoreMatch(item, query){
+  const q = query.toLowerCase();
+  let score = 0;
+  if(item.name.toLowerCase().includes(q)) score += 30;
+  if(item.location.toLowerCase().includes(q)) score += 15;
+  if((item.desc||'').toLowerCase().includes(q)) score += 8;
+  return score + (item.views||0)/100;
+}
+
+// --- Modal actions ---
+function openModal(itemId){
+  const item = listings.find(x => x.id === itemId);
+  if(!item) return;
+  // increase view count and persist
+  item.views = (item.views||0) + 1;
+  saveListings(listings);
+  $('modalImg').src = item.img || placeholderImage();
+  $('modalName').textContent = item.name;
+  $('modalType').textContent = item.type + ' • ' + item.location;
+  $('modalPrice').textContent = formatPrice(item.price);
+  $('modalDesc').textContent = item.desc || '';
+  const am = $('modalAmenities'); am.innerHTML = '';
+  (item.amenities||[]).forEach(a=>{
+    const s = document.createElement('span'); s.className='tag'; s.style.marginRight='6px'; s.textContent = a;
+    am.appendChild(s);
+  });
+  $('contactLink').href = '#';
+  $('contactLink').onclick = (e)=>{ e.preventDefault(); alert('Contact: ' + (item.contact || 'not provided')); };
+  $('fakeBook').onclick = ()=> alert('This is a demo. For real booking integrate a calendar/booking backend.');
+  $('modalBackdrop').style.display = 'flex';
+  document.body.style.overflow = 'hidden';
+  applyFilters(); // refresh featured counts
+}
+
+function closeModal(){
+  $('modalBackdrop').style.display = 'none';
+  document.body.style.overflow = '';
+}
+
+// --- Posting new listing (client-only) ---
+function openPostModal(){
+  $('postBackdrop').style.display = 'flex';
+  document.body.style.overflow = 'hidden';
+}
+function closePostModal(){
+  $('postBackdrop').style.display = 'none';
+  document.body.style.overflow = '';
+  $('postForm').reset();
+}
+
+function setupEventHandlers(){
+  // Apply / Reset
+  $('applyFilters').addEventListener('click', applyFilters);
+  $('resetFilters').addEventListener('click', ()=>{
+    $('q').value=''; $('typeFilter').value=''; $('minPrice').value=''; $('maxPrice').value=''; $('sortBy').value='relevance';
+    qa('.amenChk').forEach(c=>c.checked=false);
+    applyFilters();
+  });
+
+  // results click delegation
+  document.addEventListener('click', (e)=>{
+    const v = e.target.closest('.viewBtn');
+    if(v){ openModal(v.dataset.id); return; }
+    const c = e.target.closest('.contactBtn');
+    if(c){ alert('Contact owner: ' + c.dataset.contact); return; }
+  });
+
+  // modal close
+  $('closeModal').addEventListener('click', closeModal);
+  $('modalBackdrop').addEventListener('click', (e)=>{ if(e.target === $('modalBackdrop')) closeModal(); });
+
+  // post listing
+  $('openPostBtn').addEventListener('click', openPostModal);
+  $('closePost').addEventListener('click', closePostModal);
+  $('cancelPost').addEventListener('click', closePostModal);
+  $('postBackdrop').addEventListener('click', (e)=>{ if(e.target === $('postBackdrop')) closePostModal(); });
+
+  $('postForm').addEventListener('submit', (ev)=>{
+    ev.preventDefault();
+    const newItem = {
+      id: uid('s'),
+      name: $('p_name').value.trim(),
+      location: $('p_location').value.trim(),
+      type: $('p_type').value,
+      price: parseInt($('p_price').value) || 0,
+      img: $('p_img').value.trim() || placeholderImage(),
+      amenities: $('p_amen').value.split(',').map(s=>s.trim()).filter(Boolean),
+      desc: $('p_desc').value.trim(),
+      contact: $('p_contact').value.trim(),
+      views: 0
+    };
+    listings.unshift(newItem);
+    saveListings(listings);
+    closePostModal();
+    applyFilters();
+    alert('Listing posted (demo). It is stored locally in your browser.'
